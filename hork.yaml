@@ -1,0 +1,17 @@
+name: build
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install goctl
+        run: go install github.com/zeromicro/go-zero/tools/goctl@latest
+      - name: Build all services
+        run: |
+          for svc in $(ls services); do
+            go build -o build/$svc ./services/$svc/${svc}.go
+          done
