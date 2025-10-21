@@ -1,55 +1,59 @@
 package generator
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 )
 
-const root = "." // 生成在当前目录
-
+// Rearrange 把 goctl 骨架摆成你要求的固定结构
 func Rearrange(svc string) error {
-	// 0. 如果目标已存在，先清空  && TODO 这块逻辑有点问题，想想如果可以做成以后改了什么接口 还可以自动生成，不删目录
-	if _, err := os.Stat(svc); err == nil {
-		_ = os.RemoveAll(svc)
+	// 0. 目录提升：tmp-gen/<svc> -> <svc>  （解决双层）TODO 这里逻辑还是有点问题，后续应该支持目录自定义
+	src := filepath.Join("tmp-gen", svc)
+	if err := os.Rename(src, svc); err != nil {
+		return err
 	}
 
-	// 1. 创建公司目录
-	if err := os.Rename("tmp-gen", svc); err != nil {
-		return fmt.Errorf("move tmp-gen->%s: %w", svc, err)
+	// 1. 只清本次会覆盖”的子树，保留用户其他文件
+	dirsToClean := []string{
+		filepath.Join(svc, "cmd"),
+		filepath.Join(svc, "config"),
+		filepath.Join(svc, "api"),
+		filepath.Join(svc, "internal"),
 	}
-	dirs := []string{
-		"cmd/app", "cmd/cli",
-		"api/openapi/" + svc, "api/proto",
-		"config", "dev/docker", "dev/k8s",
-		"internal/dao/db", "internal/handler/" + svc,
-		"internal/middleware/" + svc, "internal/server",
-		"model", "pkg", "scripts",
+	for _, d := range dirsToClean {
+		_ = os.RemoveAll(d)
 	}
-	for _, d := range dirs {
-		if err := os.MkdirAll(filepath.Join(root, d), 0755); err != nil {
+
+	// 2. 把 goctl 原目录再搬回来（保证完整骨架）
+	_ = os.MkdirAll(filepath.Join(svc, "cmd/app"), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "config"), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "api/openapi", svc), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "api/proto"), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "internal/handler", svc), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "internal/middleware", svc), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "internal/dao/db"), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "dev/docker"), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "model"), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "pkg"), 0755)
+	_ = os.MkdirAll(filepath.Join(svc, "scripts"), 0755)
+
+	// 3. 精确移动：源 -> 目标（空目录已建好，直接覆盖）
+	moves := []struct{ src, dst string }{
+		{filepath.Join("tmp-gen", svc+".go"), filepath.Join(svc, "cmd/app", svc+".go")},
+		{filepath.Join("tmp-gen", "etc", svc+".yaml"), filepath.Join(svc, "config", svc+".yaml")},
+		{filepath.Join("tmp-gen", "desc", svc+".api"), filepath.Join(svc, "api/openapi", svc, svc+".api")},
+		{filepath.Join("tmp-gen", "rpc/pb", svc+".proto"), filepath.Join(svc, "api/proto", svc+".proto")},
+		{filepath.Join("tmp-gen", "internal/handler"), filepath.Join(svc, "internal/handler", svc)},
+		{filepath.Join("tmp-gen", "internal/logic"), filepath.Join(svc, "internal/logic")},
+		{filepath.Join("tmp-gen", "internal/svc"), filepath.Join(svc, "internal/svc")},
+		{filepath.Join("tmp-gen", "internal/types"), filepath.Join(svc, "internal/types")},
+	}
+	for _, m := range moves {
+		if err := os.Rename(m.src, m.dst); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
 
-	// 2. 移动文件
-	moves := []struct{ src, dst string }{
-		{filepath.Join(svc, svc+".go"), filepath.Join("cmd/app", svc+".go")},
-		{filepath.Join(svc, "etc", svc+".yaml"), filepath.Join("config", svc+".yaml")},
-		{filepath.Join(svc, "desc", svc+".api"), filepath.Join("api/openapi", svc, svc+".api")},
-		{filepath.Join(svc, "rpc", "pb", svc+".proto"), filepath.Join("api/proto", svc+".proto")},
-		{filepath.Join(svc, "internal/handler"), filepath.Join("internal/handler", svc)},
-		{filepath.Join(svc, "internal/logic"), filepath.Join("internal/logic")},
-		{filepath.Join(svc, "internal/svc"), filepath.Join("internal/svc")},
-		{filepath.Join(svc, "internal/types"), filepath.Join("internal/types")},
-	}
-	for _, m := range moves {
-		if err := os.Rename(m.src, m.dst); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("move %s->%s: %w", m.src, m.dst, err)
-		}
-	}
-
-	// 3. 清理空目录
-	_ = os.RemoveAll(svc)
-	return nil
+	// 4. 清掉 tmp-gen 骨架残留
+	return os.RemoveAll("tmp-gen")
 }
