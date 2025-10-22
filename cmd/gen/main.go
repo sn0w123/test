@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"cmcc-scaffold/pkg/generator"
+	"github.com/sn0w123/test/pkg/generator"
 
 	"github.com/spf13/cobra"
 )
