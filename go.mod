@@ -1,4 +1,4 @@
-module cmcc-scaffold
+module github.com/sn0w123/test
 
 go 1.22
 
