@@ -8,7 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	"code-XXJS.rdcloud.4c.hq.cmcc/osc/XXJS/LingXi/lx-starter/cmcc-scaffold/pkg/generator"
+	"cmcc-scaffold/pkg/generator"
+
 	"github.com/spf13/cobra"
 )
 

@@ -1,0 +1,33 @@
+syntax = "v1"
+
+info(
+    title: "{{.svc}} API"
+    desc: "{{.svc}} API"
+    version: "1.0.0"
+    author: "Generated"
+)
+
+type (
+    Response {
+        Code int    `json:"code"`
+        Msg  string `json:"msg"`
+    }
+
+    TestRequest {
+        Id int `path:"id"`
+    }
+)
+
+@server(
+    prefix: /api/v1
+    group: test
+)
+service {{.svc}}-api {
+    @handler TestHandler
+    // @Summary 测试接口
+    // @Description 测试接口
+    // @Param id path int true "ID"
+    // @Success 200 {object} Response
+    // @Router /test/{id} [get]
+    get /test/:id (TestRequest) returns (Response)
+}
